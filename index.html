@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>برنامج المخاطبات الادارية</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --watermark-image: url('https://corsproxy.io/?https://i.imgur.com/JNUggOC.png');
+            --watermark-opacity: 0.35;
+            /* 1. تم تغيير القيمة الافتراضية للحجم إلى 100% */
+            --watermark-size: 100%;
+        }
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background-color: #f0f2f5;
+            font-weight: 500;
+        }
+        .page-container {
+            max-width: 850px;
+            margin: 2rem auto;
+            background-color: white;
+            border: 10px solid transparent;
+            border-image: linear-gradient(to right, #d4af37, #b48628) 1;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            font-size: 1.05rem;
+        }
+        .page-content-wrapper {
+             padding: 0.5cm;
+             position: relative;
+             z-index: 1;
+        }
+        .page-content-wrapper::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: var(--watermark-image);
+            background-repeat: no-repeat;
+            background-position: center;
+            /* 2. تمت إعادة المتغير ليعمل مع الزر */
+            background-size: var(--watermark-size);
+            opacity: var(--watermark-opacity);
+            z-index: -1;
+        }
+        .page { display: none; }
+        .page.active { display: block; }
+        .page-content {
+            display: flex;
+            flex-direction: column;
+            min-height: 70vh;
+            position: relative;
+        }
+        .page-content::before {
+           display: none;
+        }
+        .form-body {
+            flex-grow: 1;
+        }
+        h1, h2, .form-title { font-weight: 700; }
+        .logo { width: 100px; height: 100px; }
+        .editable, .editable-short, [contenteditable="true"] { transition: border-color 0.2s; }
+        .editable, .editable-short {
+            border-bottom: 2px dotted #888;
+            padding: 0 5px;
+            min-width: 100px;
+            display: inline-block;
+            cursor: text;
+        }
+        .editable-short { min-width: 40px; }
+        .editable:focus, .editable-short:focus, [contenteditable="true"]:focus {
+            border-bottom-color: transparent;
+            outline: 2px solid #4A90E2;
+            background-color: #f0f8ff;
+        }
+        td.editable-cell, .editable-area {
+            border: 1px solid #ccc;
+            padding: 8px;
+            min-width: 80px;
+        }
+        .editable-area {
+            min-height: 150px;
+            width: 100%;
+            display: block;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            border: 1px solid #333;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: 700;
+        }
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 1rem;
+        }
+        .signature {
+            margin-top: 2rem;
+            text-align: left;
+            padding: 10px;
+        }
+        .form-footer {
+            width: 100%;
+            height: 2px;
+            background-image: linear-gradient(to right, rgba(212, 175, 55, 0), rgba(212, 175, 55, 0.75), rgba(212, 175, 55, 0));
+            margin-top: 4rem;
+        }
+        .button-container {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid #eee;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+        .action-button {
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 700;
+            transition: background-color 0.3s;
+            flex-grow: 1;
+        }
+        .action-button:hover { opacity: 0.9; }
+        .image-button { background-color: #4A90E2; }
+        .print-button { background-color: #2a9d8f; }
+        .back-button { background-color: #777; }
+        .settings-panel {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        .print-modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 1000;
+        }
+        .print-modal {
+            background: white; padding: 2rem; border-radius: 8px; text-align: center;
+        }
+        .print-modal button {
+            background-color: #2a9d8f; color: white; padding: 10px 20px;
+            border: none; border-radius: 5px; cursor: pointer; margin: 0 10px;
+        }
+        @media print {
+            body * { visibility: hidden; }
+            .page-container, .page-container * { visibility: visible; }
+            .page-container {
+                position: absolute; left: 0; top: 0; margin: 0;
+                border: none; box-shadow: none; width: 100%;
+            }
+            .button-container { display: none !important; }
+            @page { size: A4; margin: 10mm; }
+            body.print-a5 { @page { size: A5; } }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app-container" class="page-container">
+      <div class="page-content-wrapper">
+        <div id="main-page" class="page active">
+            <div class="text-center mb-8">
+                <img src="https://corsproxy.io/?https://i.imgur.com/JNUggOC.png" alt="شعار الوزارة" class="logo mx-auto mb-4" crossorigin="anonymous">
+                <h1 class="text-3xl font-bold text-gray-800">برنامج المخاطبات الادارية</h1>
+                <p class="text-lg text-gray-600 mt-2">أداة ذكية تسهل اجراء المخاطبات الإدارية لمدراء المدارس</p>
+            </div>
+
+            <h2 class="text-2xl font-bold text-center my-6 pb-2 border-b-2">محتويات برنامج المخاطبات</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                <div>
+                    <ul class="space-y-2">
+                        <li class="contents-list" onclick="showPage('form-2')">٢. نموذج مخاطبة مفرغ للبنين</li>
+                        <li class="contents-list" onclick="showPage('form-3')">٣. نموذج مخاطبة مفرغ للبنات</li>
+                        <li class="contents-list" onclick="showPage('form-4')">٤. نموذج مخاطبة مفرغ للمختلط</li>
+                        <li class="contents-list" onclick="showPage('form-5')">٥. تایید درجات طالب</li>
+                        <li class="contents-list" onclick="showPage('form-6')">٦. تایید درجات طالبة</li>
+                        <li class="contents-list" onclick="showPage('form-7')">٧. تايد تخرج طالب</li>
+                        <li class="contents-list" onclick="showPage('form-8')">٨. تايد تخرج طالبة</li>
+                        <li class="contents-list" onclick="showPage('form-9')">٩. مباشرة مدرس</li>
+                        <li class="contents-list" onclick="showPage('form-10')">١٠. مباشرة مدرسة بعد الامومة</li>
+                        <li class="contents-list" onclick="showPage('form-11')">١١. مباشرة موظفة</li>
+                        <li class="contents-list" onclick="showPage('form-12')">١٢. مباشرة موظفة بعد الامومة</li>
+                        <li class="contents-list" onclick="showPage('form-13')">١٣. انفكاك مدرسة</li>
+                        <li class="contents-list" onclick="showPage('form-14')">١٤. انفكاك موظفة</li>
+                        <li class="contents-list" onclick="showPage('form-15')">١٥. تایید استمرارية مدرسة</li>
+                    </ul>
+                </div>
+                <div>
+                    <ul class="space-y-2">
+                        <li class="contents-list" onclick="showPage('form-16')">١٦. تایید استمرارية موظفة</li>
+                        <li class="contents-list" onclick="showPage('form-17')">١٧. تایید استمرارية طالبة</li>
+                        <li class="contents-list" onclick="showPage('form-18')">١٨. تایید استمرارية محاضر / ة</li>
+                        <li class="contents-list" onclick="showPage('form-19')">١٩. تایید استمرارية ادارية</li>
+                        <li class="contents-list" onclick="showPage('form-20')">٢٠. إحالة مدرسة</li>
+                        <li class="contents-list" onclick="showPage('form-21')">٢١. إحالة موظفة</li>
+                        <li class="contents-list" onclick="showPage('form-22')">٢٢. إحالة طالبة</li>
+                        <li class="contents-list" onclick="showPage('form-23')">٢٣. ترشيح لدورة</li>
+                        <li class="contents-list" onclick="showPage('form-24')">٢٤. تخويل السيد / ة</li>
+                        <li class="contents-list" onclick="showPage('form-25')">٢٥. طلب اعفاء مدير</li>
+                        <li class="contents-list" onclick="showPage('form-26')">٢٦. طلب اعفاء مديرة</li>
+                        <li class="contents-list" onclick="showPage('form-27')">٢٧. طلب إجازة خاصة</li>
+                        <li class="contents-list" onclick="showPage('form-28')">٢٨. تخويل لاستلام الكتب ( بالصورة )</li>
+                        <li class="contents-list" onclick="showPage('form-29')">٢٩. استفسار عن غياب والانقطاع</li>
+                        <li class="contents-list" onclick="showPage('form-30')">٣٠. قبول طالبة</li>
+                        <li class="contents-list" onclick="showPage('form-31')">٣١. تجهيز اثاث</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="settings-panel">
+                <h3 class="text-xl font-bold mb-4 text-center">إعدادات الخلفية</h3>
+                <div class="mb-4">
+                    <label for="bg-uploader" class="block mb-2 font-bold">تغيير خلفية النموذج:</label>
+                    <input type="file" id="bg-uploader" accept="image/*" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"/>
+                </div>
+                <div class="mb-4">
+                    <label for="bg-opacity" class="block mb-2 font-bold">شفافية الخلفية: <span id="opacity-value">35</span>%</label>
+                    <input type="range" id="bg-opacity" min="0" max="100" value="35" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                </div>
+                <div class="mb-4">
+                    <label for="bg-size" class="block mb-2 font-bold">حجم الخلفية: <span id="size-value">100</span>%</label>
+                    <input type="range" id="bg-size" min="10" max="200" value="100" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                </div>
+                <button id="reset-bg" class="w-full bg-red-500 text-white font-bold py-2 px-4 rounded hover:bg-red-700">إعادة تعيين الخلفية للافتراضي</button>
+            </div>
+        </div>
+
+        <div id="form-2" class="page"></div>
+        <div id="form-3" class="page"></div>
+        <div id="form-4" class="page"></div>
+        <div id="form-5" class="page"></div>
+        <div id="form-6" class="page"></div>
+        <div id="form-7" class="page"></div>
+        <div id="form-8" class="page"></div>
+        <div id="form-9" class="page"></div>
+        <div id="form-10" class="page"></div>
+        <div id="form-11" class="page"></div>
+        <div id="form-12" class="page"></div>
+        <div id="form-13" class="page"></div>
+        <div id="form-14" class="page"></div>
+        <div id="form-15" class="page"></div>
+        <div id="form-16" class="page"></div>
+        <div id="form-17" class="page"></div>
+        <div id="form-18" class="page"></div>
+        <div id="form-19" class="page"></div>
+        <div id="form-20" class="page"></div>
+        <div id="form-21" class="page"></div>
+        <div id="form-22" class="page"></div>
+        <div id="form-23" class="page"></div>
+        <div id="form-24" class="page"></div>
+        <div id="form-25" class="page"></div>
+        <div id="form-26" class="page"></div>
+        <div id="form-27" class="page"></div>
+        <div id="form-28" class="page"></div>
+        <div id="form-29" class="page"></div>
+        <div id="form-30" class="page"></div>
+        <div id="form-31" class="page"></div>
+
+      </div>
+    </div>
+
+    <script>
+        function generateFormHTML(formId, title, body, signatureTitle) {
+            return `
+                <div class="page-content" contenteditable="false">
+                    <div class="form-body" contenteditable="true">
+                        <div class="header-section" contenteditable="false">
+                            <div><p contenteditable="true">جمهورية العراق</p><p contenteditable="true">إدارة: <span class="editable" contenteditable="true"></span></p></div>
+                            <img src="https://corsproxy.io/?https://i.imgur.com/JNUggOC.png" alt="شعار الوزارة" class="logo" crossorigin="anonymous">
+                            <div><p contenteditable="true">العدد: <span class="editable-short" contenteditable="true"></span></p><p contenteditable="true">التاريخ: <span class="editable-short" contenteditable="true"></span>/<span class="editable-short" contenteditable="true"></span>/<span class="editable-short" contenteditable="true">٢٠٢</span></p></div>
+                        </div>
+                        <div class="form-title" contenteditable="true">${title}</div>
+                        ${body}
+                    </div>
+                    <div class="form-signature-area">
+                        <div class="form-footer"></div>
+                        <div class="signature">
+                            <p contenteditable="true">${signatureTitle}</p>
+                            <p><span class="editable" contenteditable="true"></span></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="button-container">
+                    <button class="action-button back-button" onclick="showPage('main-page')">العودة للمحتويات</button>
+                    <button class="action-button image-button" onclick="exportPageAsImage('${formId}', '${title.replace(/[\s/]/g, '_')}')">تصدير كصورة</button>
+                    <button class="action-button print-button" onclick="showPrintModal('${formId}')">طباعة النموذج</button>
+                </div>
+            `;
+        }
+
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            const targetPage = document.getElementById(pageId);
+            if (targetPage) {
+                targetPage.classList.add('active');
+            }
+        }
+
+        function manageButtons(pageElement, action) {
+            const buttonContainer = pageElement.querySelector('.button-container');
+            if (buttonContainer) {
+                buttonContainer.style.display = action === 'hide' ? 'none' : 'flex';
+            }
+        }
+
+        function manageEditableBorders(pageElement, action) {
+            const elementsToClean = pageElement.querySelectorAll('.editable, .editable-short');
+            elementsToClean.forEach(el => {
+                if (action === 'hide' && el.innerText.trim() !== '') {
+                    el.dataset.originalBorder = el.style.borderBottom;
+                    el.style.borderBottom = '2px solid transparent';
+                } else if (action === 'show') {
+                    if (el.dataset.originalBorder !== undefined) {
+                        el.style.borderBottom = el.dataset.originalBorder;
+                    }
+                }
+            });
+        }
+
+        function exportPageAsImage(pageId, fileName) {
+            const exportContainer = document.getElementById('app-container');
+            const activePage = document.getElementById(pageId);
+            if (!exportContainer || !activePage) return;
+
+            manageButtons(activePage, 'hide');
+            manageEditableBorders(activePage, 'hide');
+
+            document.querySelectorAll('.page').forEach(page => {
+                if(page.id !== pageId) page.style.display = 'none';
+            });
+
+            html2canvas(exportContainer, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#ffffff'
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `${fileName}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            }).catch(err => {
+                console.error(`Image export failed:`, err);
+            }).finally(() => {
+                manageButtons(activePage, 'show');
+                manageEditableBorders(activePage, 'show');
+                document.querySelectorAll('.page').forEach(page => {
+                    page.style.display = '';
+                });
+                showPage(pageId);
+            });
+        }
+
+        function showPrintModal(pageId) {
+            const modalHTML = `
+                <div class="print-modal-overlay" id="print-modal-overlay">
+                    <div class="print-modal">
+                        <h3 class="text-xl font-bold mb-4">اختر حجم الورق للطباعة</h3>
+                        <button onclick="printPage('${pageId}', 'a4')">A4</button>
+                        <button onclick="printPage('${pageId}', 'a5')">A5</button>
+                        <button onclick="closePrintModal()" style="background-color: #777; margin-top: 1rem;">إلغاء</button>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+
+        function closePrintModal() {
+            const modal = document.getElementById('print-modal-overlay');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        function printPage(pageId, size) {
+            closePrintModal();
+            const activePage = document.getElementById(pageId);
+            manageButtons(activePage, 'hide');
+            manageEditableBorders(activePage, 'hide');
+
+            if (size === 'a5') {
+                document.body.classList.add('print-a5');
+            }
+
+            window.print();
+
+            manageButtons(activePage, 'show');
+            manageEditableBorders(activePage, 'show');
+            if (size === 'a5') {
+                document.body.classList.remove('print-a5');
+            }
+        }
+
+        // --- Settings Logic ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const uploader = document.getElementById('bg-uploader');
+            const opacitySlider = document.getElementById('bg-opacity');
+            const opacityValue = document.getElementById('opacity-value');
+            const sizeSlider = document.getElementById('bg-size');
+            const sizeValue = document.getElementById('size-value');
+            const resetButton = document.getElementById('reset-bg');
+            const root = document.documentElement;
+            const defaultWatermark = "url('https://corsproxy.io/?https://i.imgur.com/JNUggOC.png')";
+
+            function applySettings() {
+                const savedImage = localStorage.getItem('watermarkImage');
+                const savedOpacity = localStorage.getItem('watermarkOpacity');
+                const savedSize = localStorage.getItem('watermarkSize');
+
+                root.style.setProperty('--watermark-image', savedImage || defaultWatermark);
+                root.style.setProperty('--watermark-opacity', savedOpacity ? savedOpacity / 100 : 0.35);
+                // 4. تم تحديث القيمة الافتراضية هنا في الجافاسكريبت
+                root.style.setProperty('--watermark-size', (savedSize || 100) + '%');
+
+                if(savedOpacity) {
+                    opacitySlider.value = savedOpacity;
+                    opacityValue.textContent = savedOpacity;
+                }
+                if(savedSize) {
+                    sizeSlider.value = savedSize;
+                    sizeValue.textContent = savedSize;
+                }
+            }
+
+            uploader.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const imageUrl = `url(${event.target.result})`;
+                    localStorage.setItem('watermarkImage', imageUrl);
+                    root.style.setProperty('--watermark-image', imageUrl);
+                };
+                reader.readAsDataURL(file);
+            });
+
+            opacitySlider.addEventListener('input', (e) => {
+                const opacity = e.target.value;
+                opacityValue.textContent = opacity;
+                localStorage.setItem('watermarkOpacity', opacity);
+                root.style.setProperty('--watermark-opacity', opacity / 100);
+            });
+
+            sizeSlider.addEventListener('input', (e) => {
+                const size = e.target.value;
+                sizeValue.textContent = size;
+                localStorage.setItem('watermarkSize', size);
+                root.style.setProperty('--watermark-size', size + '%');
+            });
+
+            resetButton.addEventListener('click', () => {
+                localStorage.removeItem('watermarkImage');
+                localStorage.removeItem('watermarkOpacity');
+                localStorage.removeItem('watermarkSize');
+                opacitySlider.value = 35;
+                opacityValue.textContent = 35;
+                // 5. تم تحديث قيمة إعادة التعيين هنا
+                sizeSlider.value = 100;
+                sizeValue.textContent = 100;
+                applySettings();
+            });
+
+            applySettings();
+
+            // --- Form Generation ---
+            const formsData = {
+                'form-2': { title: 'نموذج مخاطبة مفرغ للبنين', body: `<p contenteditable="true">إلى / <span class="editable" contenteditable="true"></span></p><p contenteditable="true">م / <span class="editable" contenteditable="true"></span></p><p class="my-8" contenteditable="true">بعد التحية ...</p><div class="editable-area" contenteditable="true"></div><p class="my-8" contenteditable="true">مع فائق الشكر والتقدير</p>`, signature: 'مدير المدرسة' },
+                'form-3': { title: 'نموذج مخاطبة مفرغ للبنات', body: `<p contenteditable="true">إلى / <span class="editable" contenteditable="true"></span></p><p contenteditable="true">م / <span class="editable" contenteditable="true"></span></p><p class="my-8" contenteditable="true">بعد التحية ...</p><div class="editable-area" contenteditable="true"></div><p class="my-8" contenteditable="true">للتفضل بالعلم مع فائق الشكر والتقدير.</p>`, signature: 'مديرة المدرسة' },
+                'form-4': { title: 'نموذج مخاطبة مفرغ للمختلط', body: `<p contenteditable="true">إلى / <span class="editable" contenteditable="true"></span></p><p contenteditable="true">م / <span class="editable" contenteditable="true"></span></p><p class="my-8" contenteditable="true">بعد التحية ...</p><div class="editable-area" contenteditable="true"></div><p class="my-8" contenteditable="true">للتفضل بالعلم مع فائق الشكر والتقدير...</p>`, signature: 'مدير/ة المدرسة' },
+                'form-5': { title: 'تایید درجات طالب', body: `<p contenteditable="true">إلى / <span class="editable" contenteditable="true"></span></p><p contenteditable="true">م / تأييد</p><p class="my-8" contenteditable="true">بعد التحية ...</p><p contenteditable="true">نؤيد لكم بأن الطالب (<span class="editable" contenteditable="true"></span>) والملصقة صورته أعلاه احد طلاب مدرستنا الصف (<span class="editable" contenteditable="true"></span>).</p><p contenteditable="true">دخل الامتحان النهائي للسنة الدراسية (<span class="editable" contenteditable="true"></span>) في الدور (<span class="editable" contenteditable="true"></span>) وقد حاز على الدرجات ادناه:</p><table><thead><tr><th>ت</th><th>المواد الدراسية</th><th>الدرجة رقما</th><th>الدرجة كتابة</th><th>ت</th><th>المواد الدراسية</th><th>الدرجة رقما</th><th>الدرجة كتابة</th></tr></thead><tbody><tr><td>١</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td>٧</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr><tr><td>٢</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td>٨</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr><tr><td>٣</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td>٩</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr><tr><td>٤</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td>١٠</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr><tr><td>٥</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td>١١</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr><tr><td>٦</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td>١٢</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr></tbody></table><p class="my-4" contenteditable="true">وكانت نتيجته: <span class="editable" contenteditable="true"></span></p>`, signature: 'مدير المدرسة' },
+                'form-6': { title: 'تایید درجات طالبة', body: `<p contenteditable="true">إلى / <span class="editable" contenteditable="true"></span></p><p contenteditable="true">م / تأييد</p><p class="my-8" contenteditable="true">بعد التحية ...</p><p contenteditable="true">نؤيد لكم بأن الطالبة (<span class="editable" contenteditable="true"></span>) والملصقة صورتها أعلاه احدى طالبات مدرستنا الصف (<span class="editable" contenteditable="true"></span>).</p><p contenteditable="true">دخلت الامتحان النهائي للسنة الدراسية (<span class="editable" contenteditable="true"></span>) في الدور (<span class="editable" contenteditable="true"></span>) وقد حاز على الدرجات ادناه:</p><table><thead><tr><th>ت</th><th>المواد الدراسية</th><th>الدرجة رقما</th><th>الدرجة كتابة</th><th>ت</th><th>المواد الدراسية</th><th>الدرجة رقما</th><th>الدرجة كتابة</th></tr></thead><tbody><tr><td>١</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td>٧</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr><tr><td>٢</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td>٨</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr><tr><td>٣</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td>٩</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr><tr><td>٤</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td>١٠</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr><tr><td>٥</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td>١١</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr><tr><td>٦</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td>١٢</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr></tbody></table><p class="my-4" contenteditable="true">وكانت نتيجتها: <span class="editable" contenteditable="true"></span></p>`, signature: 'مديرة المدرسة' },
+                'form-7': { title: 'تايد تخرج طالب', body: `<p contenteditable="true">إلى / <span class="editable" contenteditable="true"></span></p><p contenteditable="true">م / تأييد تخرج</p><p class="my-8" contenteditable="true">بعد التحية ...</p><p contenteditable="true">نؤيد لكم بأن الطالب (<span class="editable" contenteditable="true"></span>) والملصقة صورته أعلاه احد طلاب مدرستنا الصف (<span class="editable" contenteditable="true"></span>).</p><p contenteditable="true">دخل الامتحان النهائي للسنة الدراسية (<span class="editable" contenteditable="true"></span>) بالرقم الامتحاني (<span class="editable" contenteditable="true"></span>) وكانت نتيجته (<span class="editable" contenteditable="true"></span>) في الدور (<span class="editable" contenteditable="true"></span>) وقد حاز على الدرجات ادناه:</p><table><thead><tr><th>ت</th><th>المواد الدراسية</th><th>الدرجة رقما</th><th>الدرجة كتابة</th></tr></thead><tbody><tr><td>١</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr><tr><td>٢</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr><tr><td>٣</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr><tr><td>٤</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr><tr><td>٥</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr><tr><td>٦</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr></tbody></table>`, signature: 'مدير المدرسة' },
+                'form-8': { title: 'تايد تخرج طالبة', body: `<p contenteditable="true">إلى / <span class="editable" contenteditable="true"></span></p><p contenteditable="true">م / تأييد تخرج</p><p class="my-8" contenteditable="true">بعد التحية ...</p><p contenteditable="true">نؤيد لكم بأن الطالبة (<span class="editable" contenteditable="true"></span>) والملصقة صورتها أعلاه احدى طالبات مدرستنا الصف (<span class="editable" contenteditable="true"></span>).</p><p contenteditable="true">دخلت الامتحان النهائي للسنة الدراسية (<span class="editable" contenteditable="true"></span>) بالرقم الامتحاني (<span class="editable" contenteditable="true"></span>) وكانت نتيجتها (<span class="editable" contenteditable="true"></span>) في الدور (<span class="editable" contenteditable="true"></span>) وقد حاز على الدرجات ادناه:</p><table><thead><tr><th>ت</th><th>المواد الدراسية</th><th>الدرجة رقما</th><th>الدرجة كتابة</th></tr></thead><tbody><tr><td>١</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr><tr><td>٢</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr><tr><td>٣</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr><tr><td>٤</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr><tr><td>٥</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr><tr><td>٦</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr></tbody></table>`, signature: 'مديرة المدرسة' },
+                'form-9': { title: 'مباشرة مدرس', body: `<p contenteditable="true">إلى / المديرية العامة لتربية <span class="editable" contenteditable="true"></span></p><p contenteditable="true">م / مباشرة مدرسة</p><p class="my-8" contenteditable="true">بعد التحية ...</p><p contenteditable="true">أشارة الى كتابكم ذي العدد <span class="editable" contenteditable="true"></span> في <span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true">٢٠٢</span> باشر السيد <span class="editable" contenteditable="true"></span> مدرسة أختصاص <span class="editable" contenteditable="true"></span> في مدرستنا يوم <span class="editable" contenteditable="true"></span> الموافق <span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true">٢٠٢</span> الظهر.</p><p class="my-8" contenteditable="true">للتفضل بالعلم والاطلاع مع فائق الشكر والتقدير...</p>`, signature: 'مديرة المدرسة' },
+                'form-10': { title: 'مباشرة مدرسة بعد الامومة', body: `<p contenteditable="true">إلى / المديرية العامة لتربية <span class="editable" contenteditable="true"></span></p><p contenteditable="true">م / مباشرة مدرسة</p><p class="my-8" contenteditable="true">بعد التحية ...</p><p contenteditable="true">أشارة الى كتابكم ذي العدد <span class="editable" contenteditable="true"></span> في <span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true">٢٠٢</span> باشرت السيدة <span class="editable" contenteditable="true"></span> مدرسة اختصاص <span class="editable" contenteditable="true"></span> في مدرستنا يوم <span class="editable" contenteditable="true"></span> الموافق <span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true">٢٠٢</span> الظهر بعد انتهاء إجازة الأمومة وحسب أمركم أعلاه.</p><p class="my-8" contenteditable="true">للتفضل بالعلم والاطلاع مع فائق الشكر والتقدير</p>`, signature: 'مديرة المدرسة' },
+                'form-11': { title: 'مباشرة موظفة', body: `<p contenteditable="true">إلى / المديرية العامة لتربية <span class="editable" contenteditable="true"></span></p><p contenteditable="true">م / مباشرة موظفة</p><p class="my-8" contenteditable="true">بعد التحية ...</p><p contenteditable="true">أشارة الى كتابكم ذي العدد <span class="editable" contenteditable="true"></span> في <span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true">٢٠٢</span> باشرت السيدة <span class="editable" contenteditable="true"></span> الموظفة بالعنوان الوظيفي <span class="editable" contenteditable="true"></span> في مدرستنا يوم <span class="editable" contenteditable="true"></span> الموافق <span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true">٢٠٢</span> الظهر.</p><p class="my-8" contenteditable="true">للتفضل بالعلم والاطلاع مع فائق الشكر والتقدير...</p>`, signature: 'مديرة المدرسة' },
+                'form-12': { title: 'مباشرة موظفة بعد الامومة', body: `<p contenteditable="true">إلى / المديرية العامة لتربية <span class="editable" contenteditable="true"></span></p><p contenteditable="true">م / مباشرة موظفة</p><p class="my-8" contenteditable="true">بعد التحية ...</p><p contenteditable="true">أشارة الى كتابكم ذي العدد <span class="editable" contenteditable="true"></span> في <span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true">٢٠٢</span> باشرت السيدة <span class="editable" contenteditable="true"></span> الموظفة بالعنوان الوظيفي <span class="editable" contenteditable="true"></span> في مدرستنا يوم <span class="editable" contenteditable="true"></span> الموافق <span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true">٢٠٢</span> الظهر بعد انتهاء إجازة الأمومة وحسب أمركم أعلاه.</p><p class="my-8" contenteditable="true">للتفضل بالعلم والاطلاع مع فائق الشكر والتقدير</p>`, signature: 'مديرة المدرسة' },
+                'form-13': { title: 'انفكاك مدرسة', body: `<p contenteditable="true">إلى / المديرية العامة لتربية <span class="editable" contenteditable="true"></span></p><p contenteditable="true">م / انفكاك مدرسة</p><p class="my-8" contenteditable="true">بعد التحية ...</p><p contenteditable="true">أشارة الى كتابكم ذي العدد <span class="editable" contenteditable="true"></span> في <span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true">٢٠٢</span> تم انفكاك السيدة <span class="editable" contenteditable="true"></span> مدرسة اختصاص <span class="editable" contenteditable="true"></span> من مدرستنا يوم <span class="editable" contenteditable="true"></span> الموافق <span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true">٢٠٢</span> الظهر.</p><p class="my-8" contenteditable="true">للتفضل بالعلم والاطلاع مع فائق الشكر والتقدير...</p>`, signature: 'مديرة المدرسة' },
+                'form-14': { title: 'انفكاك موظفة', body: `<p contenteditable="true">إلى / المديرية العامة لتربية <span class="editable" contenteditable="true"></span></p><p contenteditable="true">م / انفكاك الموظفة</p><p class="my-8" contenteditable="true">بعد التحية ...</p><p contenteditable="true">أشارة الى كتابكم ذي العدد <span class="editable" contenteditable="true"></span> في <span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true">٢٠٢</span> تم انفكاك السيدة <span class="editable" contenteditable="true"></span> الموظفة بالعنوان الوظيفي <span class="editable" contenteditable="true"></span> من مدرستنا يوم <span class="editable" contenteditable="true"></span> الموافق <span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true">٢٠٢</span> الظهر.</p><p class="my-8" contenteditable="true">للتفضل بالعلم والاطلاع مع فائق الشكر والتقدير...</p>`, signature: 'مديرة المدرسة' },
+                'form-15': { title: 'تایید استمرارية مدرسة', body: `<p contenteditable="true">إلى / <span class="editable" contenteditable="true"></span></p><p contenteditable="true">م / تأييد أستمرارية بالخدمة</p><p class="my-8" contenteditable="true">نؤيد لكم بأن السيدة <span class="editable" contenteditable="true"></span> مدرسة على ملاك مدرستنا ومستمرة في الدوام في الوقت الحاضر للعام الدراسي ٢٠٢<span class="editable-short" contenteditable="true"></span> - ٢٠٢<span class="editable-short" contenteditable="true"></span> وبناء على طلبها زودت بهذا التأييد.</p><p class="my-8" contenteditable="true">للتفضل بالعلم مع فائق الشكر والتقدير</p>`, signature: 'مديرة المدرسة' },
+                'form-16': { title: 'تایید استمرارية موظفة', body: `<p contenteditable="true">إلى / <span class="editable" contenteditable="true"></span></p><p contenteditable="true">م / تأييد أستمرارية بالخدمة</p><p class="my-8" contenteditable="true">نؤيد لكم بأن السيدة <span class="editable" contenteditable="true"></span> الموظفة على ملاك مدرستنا ومستمرة في الدوام في الوقت الحاضر للعام الدراسي ٢٠٢<span class="editable-short" contenteditable="true"></span> - ٢٠٢<span class="editable-short" contenteditable="true"></span> وبالعنوان الوظيفي <span class="editable" contenteditable="true"></span> وبناء على طلبها زودت بهذا التأييد.</p><p class="my-8" contenteditable="true">للتفضل بالعلم مع فائق الشكر والتقدير</p>`, signature: 'مديرة المدرسة' },
+                'form-17': { title: 'تایید استمرارية طالبة', body: `<p contenteditable="true">إلى / <span class="editable" contenteditable="true"></span></p><p contenteditable="true">م / تأييد استمرارية بالدوام</p><p class="my-8" contenteditable="true">نؤيد لكم بأن الطالب/ة <span class="editable" contenteditable="true"></span> والمولودة في <span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true"></span> والملصقة صورتها أعلاه مازالت مستمرة في الدوام في الوقت الحاضر للعام الدراسي ٢٠٢<span class="editable-short" contenteditable="true"></span> - ٢٠٢<span class="editable-short" contenteditable="true"></span> وبناء على طلبها زودت بهذا التأييد.</p><p class="my-8" contenteditable="true">للتفضل بالعلم مع فائق الشكر والتقدير</p>`, signature: 'مديرة المدرسة' },
+                'form-18': { title: 'تایید استمرارية محاضر / ة', body: `<p contenteditable="true">إلى / <span class="editable" contenteditable="true"></span></p><p contenteditable="true">م / تأييد أستمرارية بالخدمة</p><p class="my-8" contenteditable="true">بعد التحية ...</p><p contenteditable="true">نؤيد لكم بأن السيد/ة <span class="editable" contenteditable="true"></span> احدى محاضري مدرستنا بدون اجر حسب الامر المرقم <span class="editable" contenteditable="true"></span> في <span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true">٢٠٢</span> ومستمر في الدوام في الوقت الحالي للعام الدراسي ٢٠٢<span class="editable-short" contenteditable="true"></span> - ٢٠٢<span class="editable-short" contenteditable="true"></span> وبناء على طلبه زود بهذا التأييد.</p><p class="my-8" contenteditable="true">للتفضل بالعلم والاطلاع مع فائق الشكر والتقدير</p>`, signature: 'مديرة المدرسة' },
+                'form-19': { title: 'تایید استمرارية ادارية', body: `<p contenteditable="true">إلى / <span class="editable" contenteditable="true"></span></p><p contenteditable="true">م / تأييد أستمرارية بالخدمة</p><p class="my-8" contenteditable="true">بعد التحية ...</p><p contenteditable="true">نؤيد لكم بأن السيدة <span class="editable" contenteditable="true"></span> احدى أداريي مدرستنا بدون اجر حسب الامر المرقم <span class="editable" contenteditable="true"></span> في <span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true">٢٠٢</span> ومستمر في الدوام في الوقت الحالي للعام الدراسي ٢٠٢<span class="editable-short" contenteditable="true"></span> - ٢٠٢<span class="editable-short" contenteditable="true"></span> وبناء على طلبها زودت بهذا التأييد.</p><p class="my-8" contenteditable="true">للتفضل بالعلم والاطلاع مع فائق الشكر والتقدير...</p>`, signature: 'مديرة المدرسة' },
+                'form-20': { title: 'إحالة مدرسة', body: `<p contenteditable="true">إلى / <span class="editable" contenteditable="true"></span></p><p contenteditable="true">م / احالة</p><p class="my-8" contenteditable="true">بعد التحية ...</p><p contenteditable="true">نحيل اليكم مدرسة في مدرستنا السيدة <span class="editable" contenteditable="true"></span> راجين منكم الفحص والمعالجة واعلامنا النتيجة.</p><table><thead><tr><th>سبب الإحالة (تملئ من قبل إدارة المدرسة)</th><th>التشخيص</th><th>العلاج</th><th>التوصيات (الاجازة ، التحويل الى المستشفى او لجنة طبية)</th></tr></thead><tbody><tr><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr></tbody></table><p class="my-8" contenteditable="true">مع فائق الشكر والتقدير...</p>`, signature: 'مديرة المدرسة' },
+                'form-21': { title: 'إحالة موظفة', body: `<p contenteditable="true">إلى / <span class="editable" contenteditable="true"></span></p><p contenteditable="true">م / احالة</p><p class="my-8" contenteditable="true">بعد التحية ...</p><p contenteditable="true">نحيل اليكم الموظفة في مدرستنا السيدة <span class="editable" contenteditable="true"></span> راجين منكم الفحص والمعالجة واعلامنا النتيجة.</p><table><thead><tr><th>سبب الإحالة (تملئ من قبل إدارة المدرسة)</th><th>التشخيص</th><th>العلاج</th><th>التوصيات (الاجازة ، التحويل الى المستشفى او لجنة طبية)</th></tr></thead><tbody><tr><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr></tbody></table><p class="my-8" contenteditable="true">مع فائق الشكر والتقدير...</p>`, signature: 'مديرة المدرسة' },
+                'form-22': { title: 'إحالة طالبة', body: `<p contenteditable="true">إلى / <span class="editable" contenteditable="true"></span></p><p contenteditable="true">م / احالة</p><p class="my-8" contenteditable="true">بعد التحية ...</p><p contenteditable="true">نحيل اليكم احد طلبة مدرستنا <span class="editable" contenteditable="true"></span> راجين منكم الفحص والمعالجة واعلامنا النتيجة.</p><table><thead><tr><th>سبب الإحالة (تملئ من قبل إدارة المدرسة)</th><th>التشخيص</th><th>العلاج</th><th>التوصيات (الاجازة ، التحويل الى المستشفى او لجنة طبية)</th></tr></thead><tbody><tr><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr></tbody></table><p class="my-8" contenteditable="true">مع فائق الشكر والتقدير</p>`, signature: 'مديرة المدرسة' },
+                'form-23': { title: 'ترشيح لدورة', body: `<p contenteditable="true">إلى / المديرية العامة لتربية <span class="editable" contenteditable="true"></span></p><p contenteditable="true">م / ترشيح</p><p class="my-8" contenteditable="true">بعد التحية ...</p><p contenteditable="true">أشارة الى كتابكم ذي العدد <span class="editable" contenteditable="true"></span> في <span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true">٢٠٢</span> نرسل اليكم أسماء مرشحينا للاشتراك بدورة <span class="editable" contenteditable="true"></span>.</p><table><thead><tr><th>ت</th><th>الاسم الرباعي</th><th>العنوان الوظيفي</th><th>الشهادة</th><th>الاختصاص</th><th>رقم الموبايل</th></tr></thead><tbody><tr><td>١</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr><tr><td>٢</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr></tbody></table><p class="my-8" contenteditable="true">للتفضل بالعلم والاطلاع مع فائق الشكر والتقدير ..</p>`, signature: 'مديرة المدرسة' },
+                'form-24': { title: 'تخويل السيد / ة', body: `<p contenteditable="true">إلى / المديرية العامة لتربية <span class="editable" contenteditable="true"></span></p><p contenteditable="true">م / تخويل</p><p class="my-8" contenteditable="true">بعد التحية ...</p><p contenteditable="true">خولنا السيد/ة <span class="editable" contenteditable="true"></span> أحد ملاك مدرستنا لاستلام <span class="editable" contenteditable="true"></span>.</p><p class="my-8" contenteditable="true">للتفضل بالعلم والاطلاع مع فائق الشكر والتقدير</p>`, signature: 'مديرة المدرسة' },
+                'form-25': { title: 'طلب اعفاء مدير', body: `<p contenteditable="true">إلى / السيد المدير العام لتربية <span class="editable" contenteditable="true"></span></p><p contenteditable="true">م / طلب اعفاء</p><p class="my-8" contenteditable="true">تحية طيبة ...</p><p contenteditable="true">اني السيد <span class="editable" contenteditable="true"></span> مدير مدرسة <span class="editable" contenteditable="true"></span> شغلت منصب مديرا للمدرسة منذ تاريخ <span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true">٢٠٢</span> ، يرجى من سيادتكم التفضل بالموافقة على اعفائي من منصبي وذلك بسبب <span class="editable" contenteditable="true"></span>.</p><p class="my-8" contenteditable="true">هذا ولكم الأمر ..... مع فائق الشكر والتقدير...</p>`, signature: 'مدير المدرسة' },
+                'form-26': { title: 'طلب اعفاء مديرة', body: `<p contenteditable="true">إلى / السيد المدير العام لتربية <span class="editable" contenteditable="true"></span></p><p contenteditable="true">م / طلب اعفاء</p><p class="my-8" contenteditable="true">تحية طيبة ...</p><p contenteditable="true">اني السيدة <span class="editable" contenteditable="true"></span> مديرة مدرسة <span class="editable" contenteditable="true"></span> شغلت منصب مديرة للمدرسة منذ تاريخ <span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true">٢٠٢</span> ، يرجى من سيادتكم التفضل بالموافقة على اعفائي من منصبي وذلك بسبب <span class="editable" contenteditable="true"></span>.</p><p class="my-8" contenteditable="true">هذا ولكم الأمر ..... مع فائق الشكر والتقدير...</p>`, signature: 'مديرة المدرسة' },
+                'form-27': { title: 'طلب إجازة خاصة', body: `<p contenteditable="true">السيد مدير المدرسة المحترم ...</p><p contenteditable="true">م / طلب أجازة خاصة</p><p contenteditable="true">ارجو التفضل بالموافقة على منحي إجازة اعتيادية لمدة (<span class="editable" contenteditable="true"></span>) يوماً اعتباراً من يوم <span class="editable" contenteditable="true"></span> الموافق <span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true">٢٠٢</span> ولغاية يوم <span class="editable" contenteditable="true"></span> الموافق <span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true">٢٠٢</span> وذلك بسبب <span class="editable" contenteditable="true" style="width: 70%;"></span>.</p><p class="my-4" contenteditable="true">هذا ولكم الأمر مع فائق الشكر والتقدير.</p><div class="mt-8 text-left" contenteditable="true"><p>التوقيع: <span class="editable" contenteditable="true"></span></p><p>اسم المدرسة: <span class="editable" contenteditable="true"></span></p><p>التاريخ: <span class="editable" contenteditable="true"></span></p></div><hr class="my-8"><p class="font-bold" contenteditable="true">رأي إدارة المدرسة :-</p><p contenteditable="true">استناداً الى الصلاحيات المخولة لنا تقرر منح السيدة (<span class="editable" contenteditable="true"></span>) إجازة اعتيادية امدها (<span class="editable" contenteditable="true"></span>) اعتباراً من يوم (<span class="editable" contenteditable="true"></span>) الموافق (<span class="editable" contenteditable="true"></span>) وتحتسب من ضمن الرصيد البالغ سبعة أيام وحسب الامر المدرسي المرقم (<span class="editable" contenteditable="true"></span>) في (<span class="editable" contenteditable="true"></span>).</p>`, signature: 'مديرة المدرسة' },
+                'form-28': { title: 'تخويل لاستلام الكتب ( بالصورة )', body: `<p contenteditable="true">إلى / المديرية العامة لتربية <span class="editable" contenteditable="true"></span></p><p contenteditable="true">م / تخويل لاستلام كتب</p><p class="my-8" contenteditable="true">بعد التحية ...</p><p contenteditable="true">خولنا السيد/ة <span class="editable" contenteditable="true"></span> أحد ملاك مدرستنا والملصقة صورته أعلاه لاستلام حصة المدرسة من الكتب و <span class="editable" contenteditable="true"></span>.</p><p class="my-8" contenteditable="true">للتفضل بالعلم والاطلاع مع فائق الشكر والتقدير ..</p>`, signature: 'مديرة المدرسة' },
+                'form-29': { title: 'استفسار عن غياب والانقطاع', body: `<p contenteditable="true">الأستاذ/ة <span class="editable" contenteditable="true"></span></p><p contenteditable="true">م / استفسار عن انقطاع أو غياب عن الدوام</p><p contenteditable="true">مدرسة مدرستنا الإجابة عن السؤال التالي :</p><p contenteditable="true">سؤال / ما سبب انقطاعك عن الدوام الرسمي ليوم <span class="editable" contenteditable="true"></span> بتاريخ <span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true"></span>/<span class="editable" contenteditable="true">٢٠٢</span> ولمدة <span class="editable" contenteditable="true"></span> يوما والذي يعد مخالفة لنظام المدارس الثانوية رقم ٢ لسنة ١٩٧٧ المادة ١٨ ( على المدرسة ان يحرص على الدوام والنظام والحضور إلى المدرسة قبل ابتداء الدوام بمدة مناسبة ) .</p><p class="font-bold mt-8" contenteditable="true">الإجابة :-</p><div class="editable-area" contenteditable="true"></div><p class="font-bold mt-8" contenteditable="true">رأي إدارة المدرسة :-</p><div class="editable-area" contenteditable="true"></div>`, signature: 'مديرة المدرسة' },
+                'form-30': { title: 'قبول طالبة', body: `<p contenteditable="true">إلى / <span class="editable" contenteditable="true"></span></p><p contenteditable="true">م / قبول طالبة</p><p class="my-8" contenteditable="true">بعد التحية ...</p><p contenteditable="true">لا مانع لدينا من قبول طالبة <span class="editable" contenteditable="true"></span> في الصف <span class="editable" contenteditable="true"></span> في مدرستنا للعام الدراسي ٢٠٢<span class="editable-short" contenteditable="true"></span> - ٢٠٢<span class="editable-short" contenteditable="true"></span> بعد اكمال أوراق النقل وحسب الضوابط.</p><p class="my-8" contenteditable="true">مع التقدير.</p>`, signature: 'مديرة المدرسة' },
+                'form-31': { title: 'تجهيز اثاث', body: `<p contenteditable="true">إلى / المديرية العامة لتربية <span class="editable" contenteditable="true"></span></p><p contenteditable="true">م / تجهيز اثاث</p><p class="my-8" contenteditable="true">تحية طيبة ...</p><p contenteditable="true">يرجى تزويد مدرستنا بالمواد المدرجة ادناه لحاجة مدرستنا الماسة لها ...</p><table><thead><tr><th>ت</th><th>المواد</th><th>العدد</th></tr></thead><tbody><tr><td>١</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr><tr><td>٢</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr><tr><td>٣</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr><tr><td>٤</td><td contenteditable="true" class="editable-cell"></td><td contenteditable="true" class="editable-cell"></td></tr></tbody></table><p class="my-8" contenteditable="true">هذا ولكم الأمر ..... مع فائق الشكر والتقدير ...</p>`, signature: 'مديرة المدرسة' },
+            };
+
+            for (const [formId, data] of Object.entries(formsData)) {
+                const formElement = document.getElementById(formId);
+                if (formElement) {
+                    formElement.innerHTML = generateFormHTML(formId, data.title, data.body, data.signature);
+                }
+            }
+            showPage('main-page');
+        });
+    </script>
+
+</body>
+</html>
