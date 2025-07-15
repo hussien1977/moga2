@@ -13,7 +13,6 @@
         :root {
             --watermark-image: url('https://corsproxy.io/?https://i.imgur.com/JNUggOC.png');
             --watermark-opacity: 0.35;
-            /* 1. تم تغيير القيمة الافتراضية للحجم إلى 100% */
             --watermark-size: 100%;
         }
         body {
@@ -45,7 +44,6 @@
             background-image: var(--watermark-image);
             background-repeat: no-repeat;
             background-position: center;
-            /* 2. تمت إعادة المتغير ليعمل مع الزر */
             background-size: var(--watermark-size);
             opacity: var(--watermark-opacity);
             z-index: -1;
@@ -65,7 +63,7 @@
             flex-grow: 1;
         }
         h1, h2, .form-title { font-weight: 700; }
-        .logo { width: 100px; height: 100px; }
+        .logo { width: 120px; height: 120px; }
         .editable, .editable-short, [contenteditable="true"] { transition: border-color 0.2s; }
         .editable, .editable-short {
             border-bottom: 2px dotted #888;
@@ -80,8 +78,9 @@
             outline: 2px solid #4A90E2;
             background-color: #f0f8ff;
         }
+        /* التعديل الأول: للخلايا القابلة للتعديل */
         td.editable-cell, .editable-area {
-            border: 1px solid #ccc;
+            border: 2px solid #000; /* <--- تم تعديل هذا السطر */
             padding: 8px;
             min-width: 80px;
         }
@@ -95,8 +94,9 @@
             border-collapse: collapse;
             margin-top: 1rem;
         }
+        /* التعديل الثاني: لجميع خلايا الجدول (لضمان التوافق) */
         th, td {
-            border: 1px solid #333;
+            border: 2px solid #000; /* <--- تم تعديل هذا السطر */
             padding: 8px;
             text-align: center;
         }
@@ -435,7 +435,6 @@
 
                 root.style.setProperty('--watermark-image', savedImage || defaultWatermark);
                 root.style.setProperty('--watermark-opacity', savedOpacity ? savedOpacity / 100 : 0.35);
-                // 4. تم تحديث القيمة الافتراضية هنا في الجافاسكريبت
                 root.style.setProperty('--watermark-size', (savedSize || 100) + '%');
 
                 if(savedOpacity) {
@@ -480,7 +479,6 @@
                 localStorage.removeItem('watermarkSize');
                 opacitySlider.value = 35;
                 opacityValue.textContent = 35;
-                // 5. تم تحديث قيمة إعادة التعيين هنا
                 sizeSlider.value = 100;
                 sizeValue.textContent = 100;
                 applySettings();
